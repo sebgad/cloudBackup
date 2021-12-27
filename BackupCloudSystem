@@ -3,9 +3,9 @@
 # USER INPUT --------------------------------------------------
 
 # define restic repository as environment variable
-export RESTIC_REPOSITORY=/srv/YourBackup
+export RESTIC_REPOSITORY=/srv/backupdrive/
 # define restic password for encryption as environment variable
-export RESTIC_PASSWORD=12345
+export RESTIC_PASSWORD=1234
 
 # define directories to backup as array
 BACKUPDIRS=( /var/www/nextcloud /var/nextcloud-data )
@@ -15,7 +15,7 @@ NEXTCLOUD_LOC=/var/www/nextcloud
 
 MARIA_DB_HOST=localhost
 MARIA_DB_USER=nextadmin
-MARIA_DB_PW=123456
+MARIA_DB_PW=1234
 MARIA_DB_NAME=nextcloud
 
 #-------------------------------------------------------------------
@@ -27,7 +27,7 @@ sudo -u www-data php $NEXTCLOUD_LOC/occ maintenance:mode --on
 sleep 5
 
 # start / mount backup drive, if not already started/mounted
-sudo startBackupDrive
+startBackupDrive
 
 echo ''
 echo "########### File SYSTEM INFO ###############"
@@ -72,7 +72,7 @@ sudo -u www-data php $NEXTCLOUD_LOC/occ maintenance:mode --off
 echo ''
 echo ''
 # remove exclusive lock after checking file system
-restic unlock
+restic unlock --remove-all
 
 # remove local cache files
 restic cache --cleanup
@@ -90,20 +90,26 @@ echo "RESTIC SANITY CHECKS"
 # check integrity of repository. Day 1-6 of the week only 1/7 of the data
 # On day 7 check entire repository integrity
 DAY_OF_WEEK=$(date +%u)
-if [$DAY_OF_WEEK -lt 7]
-then
-	echo "From Mon-Sat: Check Integrity of Pack $DOW/6 depending on the weekday"
-	restic check --read-data-subset=$DOW/6
+DAY_CMP=7
+if [[ $DAY_OF_WEEK -lt $DAY_CMP ]];then
+	echo "From Mon-Sat: Check Integrity of Pack $DAY_OF_WEEK/6 depending on the weekday"
+	restic check --read-data-subset=$DAY_OF_WEEK/6
 else
 	echo "On Sun: Check Integrity of the entire repository"
 	restic check --read-data
 fi
 echo ''
 
+# remove exclusive lock after checking file system
+restic unlock --remove-all
+
+# remove local cache files
+restic cache --cleanup
+
 # wait 10s before shutdown backup drive
 sleep 10
 
-sudo stopBackupDrive
+stopBackupDrive
 
 echo ''
 echo "####################################### Done ######################################"
