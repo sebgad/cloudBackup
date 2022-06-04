@@ -23,7 +23,7 @@ Please make sure to restrict user access of the scripts like below.
 ```console 
 foo@bar:~# chown root BackupCloudSystem && chmod 700 BackupCloudSystem
 ``` 
-When you want to run the backup script every night, please add the following line in cron
+When you want to run the backup script every night, and store the output in a log file, please add the following line in cron
 ```console 
-@midnight BackupCloudSystem
+0 3 * * * BackupCloudSystem >> /var/log/cloudbackup.log 2>&1
 ``` 
