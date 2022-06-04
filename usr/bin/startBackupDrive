@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Define your Backup mount directory
+TARGET_ROOT=/srv/YourTarget
+# Define uuid of backup storage device
+UUID_TARGET=xxxx-xxxx-xxxxxx-xxxx
+
+ROOT_MOUNTED=$(findmnt -M $TARGET_ROOT -n)
+
+if [[ -n $ROOT_MOUNTED ]]; then
+	echo "$TARGET_ROOT already mounted. Skip mount."
+else
+	# Mount drive and wait
+	mount -U $UUID_TARGET $TARGET_ROOT
+	sleep 5
+fi

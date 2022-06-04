@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Backup mount directory
+TARGET_ROOT=/srv/BackupDirectory
+# uuid of your backup storage device
+UUID_TARGET=xxxxx-xxxx-xxxx-xxxxx
+
+ROOT_MOUNTED=$(sudo findmnt -M $TARGET_ROOT -n)
+
+if [[ -n $ROOT_MOUNTED ]]; then
+	echo "UNMOUNT $TARGET_ROOT"
+	# Unmount backup device
+	umount $TARGET_ROOT
+	sleep 5
+else
+	echo "$TARGET_ROOT is not mounted"
+fi
+
+# Set backup storage device to idle mode (in case it is an hdd) and wait 10s
+hd-idle -t disk/by-uuid/$UUID_TARGET
+sleep 10
