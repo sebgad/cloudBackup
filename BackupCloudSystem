@@ -1,0 +1,120 @@
+#!/bin/bash
+
+# Configuration INPUT ---------------------------------------------
+
+# Define restic repository settings. At least RESTIC_REPOSITORY, RESTIC_PASSWORD
+# and BACKUPDIRS needs to be set.
+. /root/restic_rep_settings.sh
+
+# define nextcloud location on filesystem
+NEXTCLOUD_LOC=/var/www/nextcloud
+
+# Define MariaDB settings. At least MARIA_DB_HOST, MARIA_DB_USER, MARIA_DB_PW
+# and MARIA_DB_NAMES needs to be set. Assumption: One backupuser for all databases
+. /root/maria_db_settings.sh
+
+#-------------------------------------------------------------------
+
+# START AUTOMATED BACKUP SCRIPT
+
+# Timestamp for backup
+DATE=$(date --iso-8601)
+
+echo "############    START BACKUP ON $DATE    ###############"
+
+# start / mount backup drive, if not already started/mounted
+startBackupDrive
+
+# activate maintanance mode of nextcloud, no user access possible from now on
+sudo -u www-data php $NEXTCLOUD_LOC/occ maintenance:mode --on > /dev/null 2>&1
+
+echo ''
+echo "--- AVAILABLE MEMORY on restic repository ---"
+df -h $RESTIC_REPOSITORY
+echo ''
+echo ''
+
+# show restic version as information
+echo "--- USING RESTIC BACKUP TOOL ---"
+restic version
+echo ''
+echo ''
+
+echo "### START BACKUP on filesystem ###"
+# loop over backup directories and save them
+for src_dir in "${BACKUPDIRS[@]}";
+do
+	echo "--- START BACKUP of $src_dir ---"
+        restic backup $src_dir
+	sleep 5
+	echo "--- FINISHED BACKUP of $src_dir ---"
+done
+echo '### BACKUP on filesystem finished ###'
+echo ''
+
+echo "### START BACKUP for mariadb databases ###"
+for maria_db_name in "${MARIA_DB_NAMES[@]}";
+do
+  echo "--- START BACKUP of mariadb database $maria_db_name ---"
+  mysqldump \
+   --single-transaction \
+   -h $MARIA_DB_HOST \
+   -u $MARIA_DB_USER \
+   -p$MARIA_DB_PW \
+   $maria_db_name | restic backup --stdin --stdin-filename mysql_${maria_db_name}_backup.sql
+   echo "--- FINISHED BACKUP of mariadb database $maria_db_name ---"
+done
+echo ''
+echo ''
+
+echo "### BACKUP for mariadb databases finished ###"
+
+# turn nextcloud maintenance mode off, server is accessible again
+sudo -u www-data php $NEXTCLOUD_LOC/occ maintenance:mode --off > /dev/null 2>&1
+
+# remove exclusive lock after checking file system
+restic unlock --remove-all > /dev/null 2>&1
+
+# remove local cache files
+restic cache --cleanup > /dev/null 2>&1
+
+# Define restic incremental backup forget strategy for each backup path (directory or filestream)
+#		- for the last 28 days which have one or more snapshots, only keep the last one for that day
+#		- for the last 12 weeks which have one or more snapshots, only keep the last one for that week
+#		- for the last 12 months which have one or more snapshots, only keep the last one for that month
+# unlink files and prune / remove them
+echo ''
+echo "### DELETE OLD BACKUPS ###"
+echo "--- Applying Policy: keep 28 daily, 12 weekly, 12 monthly snapshots for each backup path... ---"
+restic forget --keep-daily 28 --keep-weekly 12 --keep-monthly 12 --group-by paths --prune
+echo "### DELETE OLD BACKUPS finished ###"
+echo ''
+
+echo "### CHECK INTEGRITY of repository ###"
+# check integrity of repository. Day 1-6 of the week only 1/7 of the data
+# On day 7 check entire repository integrity
+DAY_OF_WEEK=$(date +%u)
+DAY_CMP=7
+if [[ $DAY_OF_WEEK -lt $DAY_CMP ]];then
+	echo "--- From Mon-Sat: Check Integrity of Pack $DAY_OF_WEEK/6 depending on the weekday ---"
+	restic check --read-data-subset=$DAY_OF_WEEK/6
+else
+	echo "--- On Sun: Check Integrity of the entire repository ---"
+	restic check --read-data
+fi
+echo ''
+
+# remove exclusive lock after checking file system
+restic unlock --remove-all > /dev/null 2>&1
+
+# remove local cache files
+restic cache --cleanup > /dev/null 2>&1
+
+# wait 10s before shutdown backup drive
+sleep 10
+
+stopBackupDrive
+
+echo ''
+echo "############    FINISHED BACKUP ON $DATE    ###############"
+echo ''
