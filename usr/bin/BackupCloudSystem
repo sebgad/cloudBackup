@@ -62,7 +62,7 @@ do
    -u $MARIA_DB_USER \
    -p$MARIA_DB_PW \
    $maria_db_name | restic backup --stdin --stdin-filename mysql_${maria_db_name}_backup.sql
-   echo '--- FINISHED BACKUP of mariadb database $maria_db_name ---'
+   echo "--- FINISHED BACKUP of mariadb database $maria_db_name ---"
 done
 echo ''
 echo ''
