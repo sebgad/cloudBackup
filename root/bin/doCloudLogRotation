@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Cloud log rotation
+cat /var/log/cloudbackup/cloudbackup_main.daily.log >> /var/log/cloudbackup/cloudbackup_main.log
+cat /var/log/cloudbackup/cloudbackup_redund.daily.log >> /var/log/cloudbackup/cloudbackup_redund.log

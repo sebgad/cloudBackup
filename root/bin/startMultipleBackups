@@ -1,0 +1,28 @@
+#!/bin/bash
+. encpass.sh
+
+# spin up and start Backup drive
+startBackupDrive
+
+# Define Backupfolders and restic password
+export BACKUPDIRS=(/root /folder1 /folder2)
+export RESTIC_PASSWORD=$(get_secret BackupCloudSystem restic)
+
+# define MARIADB settings
+export MARIA_DB_HOST=localhost
+export MARIA_DB_USER=backupuser
+export MARIA_DB_PW=$(get_secret BackupCloudSystem mysql_backupuser)
+export MARIA_DB_NAMES=(nextcloud database2)
+
+# define nextcloud location
+export NEXTCLOUD_LOC=/var/www/nextcloud
+
+# Create Backup for first restic repository
+export RESTIC_REPOSITORY=/mnt/backup_drive/cloud-repo1
+backupCloudSystem > /var/log/cloudbackup/cloudbackup_main.daily.log
+
+# Create Backup for second restic repository
+export RESTIC_REPOSITORY=/mnt/backup_drive/cloud-repo2
+backupCloudSystem > /var/log/cloudbackup/cloudbackup_redund.daily.log
+
+stopBackupDrive

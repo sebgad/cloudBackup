@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Backup Target
+TARGET_ROOT=/mnt/backup_drive
+UUID_TARGET=xyz
+
+ROOT_MOUNTED=$(sudo findmnt -M $TARGET_ROOT -n)
+
+if [[ -n $ROOT_MOUNTED ]]; then
+	echo "UNMOUNT $TARGET_ROOT"
+	umount $TARGET_ROOT
+	sleep 5
+else
+	echo "$TARGET_ROOT is not mounted"
+fi
+
+# Use hd-idle to spin down device
+hd-idle -t disk/by-uuid/$UUID_TARGET
+# wait 5 seconds
+sleep 5

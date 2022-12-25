@@ -1,0 +1,15 @@
+#!/bin/bash
+
+TARGET_ROOT=/mnt/backup_drive
+UUID_TARGET=xyz
+
+ROOT_MOUNTED=$(findmnt -M $TARGET_ROOT -n)
+
+if [[ -n $ROOT_MOUNTED ]]; then
+	echo "$TARGET_ROOT already mounted. Skip mount."
+else
+	echo "MOUNTING $TARGET_ROOT"
+	mount -U $UUID_TARGET $TARGET_ROOT
+	sleep 5
+fi
+

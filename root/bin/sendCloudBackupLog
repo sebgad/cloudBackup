@@ -1,0 +1,6 @@
+#!/bin/bash
+
+DATE=$(date --iso-8601)
+
+cat /var/log/cloudbackup/cloudbackup_main.daily.log | mail -s "Cloudbackup LOG for Main Backup on $DATE" yourEmail@host.com
+cat /var/log/cloudbackup/cloudbackup_redund.daily.log | mail -s "Cloudbackup LOG for Redundant Backup on $DATE" yourEmail@host.com
