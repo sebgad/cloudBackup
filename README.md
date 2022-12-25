@@ -15,15 +15,22 @@ Please keep the same folder structure like shown in this repository. Following s
 - A restic repository on an external storage device is created
 - encpass is installed and the credentials are created
 
+For easier access you can create a symlink for each file, e.g.
+```console 
+foo@bar:~# ln -s /root/bin/startMultipleBackups /usr/local/bin/startMultipleBackups
+```
+
 ### Adaptions
 All files needs to be adapted to your specific use case. You can find the explanation of the variables in the comments directly in the scripts.
 
 Please make sure to restrict user access of the scripts like below.
 
 ```console 
-foo@bar:~# chown root BackupCloudSystem && chmod 700 BackupCloudSystem
+foo@bar:~# chown root startMultipleBackups && chmod 700 startMultipleBackups
 ``` 
 When you want to run the backup script every night, and store the output in a log file, please add the following line in cron
 ```console 
-0 3 * * * BackupCloudSystem >> /var/log/cloudbackup.log 2>&1
+0 2 * * * startMultipleBackups
+0 3 * * * sendCloudBackupLog
+0 4 * * * doCloudLogRotation
 ``` 
