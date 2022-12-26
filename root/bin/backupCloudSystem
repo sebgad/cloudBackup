@@ -24,7 +24,7 @@ echo ''
 
 echo "### START BACKUP on filesystem ###"
 # loop over backup directories and save them
-for src_dir in "${BACKUPDIRS[@]}";
+for src_dir in $BACKUPDIRS;
 do
 	echo "--- START BACKUP of $src_dir ---"
         restic backup $src_dir
@@ -35,7 +35,7 @@ echo '### BACKUP on filesystem finished ###'
 echo ''
 
 echo "### START BACKUP for mariadb databases ###"
-for maria_db_name in "${MARIA_DB_NAMES[@]}";
+for maria_db_name in $MARIA_DB_NAMES;
 do
   echo "--- START BACKUP of mariadb database $maria_db_name ---"
   mysqldump \

@@ -1,28 +1,42 @@
 #!/bin/bash
 . encpass.sh
 
-# spin up and start Backup drive
-startBackupDrive
+# spin up and start Backup drive, output is redirected to NULL to avoid further emails.
+startBackupDrive > /dev/null 2>&1
 
 # Define Backupfolders and restic password
-export BACKUPDIRS=(/root /folder1 /folder2)
 export RESTIC_PASSWORD=$(get_secret BackupCloudSystem restic)
+BACKUPDIRS_ARR=(/var/log /etc /var/www/nextcloud /var/nextcloud-data)
+
+# Define an environment variable to handle arrays as comma separated string
+# ISSUE_PENDING establish arguments in backupCloudSystem script
+# https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+
+printf -v BACKUPDIRS ' %s' "${BACKUPDIRS_ARR[@]}"
+BACKUPDIRS=${BACKUPDIRS:1}
+export BACKUPDIRS=$BACKUPDIRS
 
 # define MARIADB settings
 export MARIA_DB_HOST=localhost
 export MARIA_DB_USER=backupuser
 export MARIA_DB_PW=$(get_secret BackupCloudSystem mysql_backupuser)
-export MARIA_DB_NAMES=(nextcloud database2)
+MARIA_DB_NAMES_ARR=(nextcloud database2)
+
+# Define an environment variable to handle arrays as comma separated string
+printf -v MARIA_DB_NAMES ' %s' "${MARIA_DB_NAMES_ARR[@]}"
+MARIA_DB_NAMES=${MARIA_DB_NAMES:1}
+export MARIA_DB_NAMES=$MARIA_DB_NAMES
 
 # define nextcloud location
 export NEXTCLOUD_LOC=/var/www/nextcloud
 
 # Create Backup for first restic repository
-export RESTIC_REPOSITORY=/mnt/backup_drive/cloud-repo1
-backupCloudSystem > /var/log/cloudbackup/cloudbackup_main.daily.log
+export RESTIC_REPOSITORY=/mnt/backup1
+backupCloudSystem > /var/log/cloudbackup/cloudbackup1.log
 
 # Create Backup for second restic repository
-export RESTIC_REPOSITORY=/mnt/backup_drive/cloud-repo2
-backupCloudSystem > /var/log/cloudbackup/cloudbackup_redund.daily.log
+export RESTIC_REPOSITORY=/mnt/backup_2
+backupCloudSystem > /var/log/cloudbackup/cloudbackup2.log
 
-stopBackupDrive
+# Stop Backup drive, output is redirected to NULL to avoid further emails.
+stopBackupDrive > /dev/null 2>&1
