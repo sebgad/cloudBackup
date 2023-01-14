@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Please run script as root
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
+read -p "Which port do you want to use alternatively?" PORT
+
+mkdir -p /etc/systemd/system/ssh.socket.d/
+
+cat >/etc/systemd/system/ssh.socket.d/listen.conf <<EOF
+[Socket]
+ListenStream=
+ListenStream=$PORT
+EOF
+
+echo "Add firewall rule to ufw"
+apt install ufw -y
+ufw allow $PORT/tcp
+
+systemctl daemon-reload
+systemctl restart ssh
+
