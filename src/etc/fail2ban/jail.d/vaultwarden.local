@@ -1,0 +1,10 @@
+[vaultwarden]
+enabled = true
+port = 444
+filter = vaultwarden
+banaction = %(banaction_allports)s
+action = iptables-allports[name=vaultwarden]
+logpath = /opt/vaultwarden/vaultwarden.log
+maxretry = 3
+bantime = 86400
+findtime = 43200

@@ -24,11 +24,18 @@ touch /var/log/cloudbackup/cloudbackup_main.log
 touch /var/log/cloudbackup/cloudbackup_redund.daily.log
 touch /var/log/cloudbackup/cloudbackup_redund.log
 
-cp -R src/etc/ssh/sshd_config.d/* /etc/ssh/sshd_config.d/
-
 scripts/create_user.sh
 scrits/install_u2f_key.sh
 scripts/security_hardening.sh
 scripts/ssh_alternative_port.sh
+
+# SSHD config files
+cp -R src/etc/ssh/sshd_config.d/* /etc/ssh/sshd_config.d/
+
+# fail2ban installation and config files
+apt-get install -y fail2ban
+cp -R src/etc/fail2ban/filter.d/* /etc/fail2ban/filter.d/
+cp -R src/etc/fail2ban/jail.d/* /etc/fail2ban/jail.d
+cp src/etc/fail2ban/jail.local /etc/fail2ban/jail.local
 
 
