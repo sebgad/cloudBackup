@@ -16,23 +16,26 @@ curl -o /etc/udev/rules.d/70-u2f.rules https://raw.githubusercontent.com/Yubico/
 
 read -p "Please input username who suppose to use yubikey for authentification?" USERNAME
 # as user, please insert yubikey
-mkdir -p $USERNAME/.config/Yubico
+mkdir -p /home/$USERNAME/.config/Yubico
 
 # write first key to key file, please press key button
-pamu2fcfg -P > $USERNAME/.config/Yubico/u2f_keys # switch "-P" is optional. You do not need to press the key when logging if this switch is set.
+pamu2fcfg -P > /home/$USERNAME/.config/Yubico/u2f_keys # switch "-P" is optional. You do not need to press the key when logging if this switch is set.
 
 # Optional: append keys with 
 # pamu2fcfg -P >> ~/.config/Yubico/u2f_keys 
 
 # Make key system wide available
 sudo mkdir -p /root/.config/Yubico
-sudo cp $USERNAME/.config/Yubico/u2f_keys /root/.config/Yubico/
+sudo cp /home/$USERNAME/.config/Yubico/u2f_keys /root/.config/Yubico/
 
 # Change to root
 cp /root/.config/Yubico/u2f_keys /root/.config/Yubico/u2f_keys_root
 
 # replace user with root in file
 sed -i 's/.*:/root:/g' /root/.config/Yubico/u2f_keys_root
+
+# Delete key files in user directory
+rm -r /home/$USERNAME/.config/Yubico
 
 # Check output file
 echo "check output file. Should have the format root:Key"
