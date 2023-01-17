@@ -38,4 +38,8 @@ cp -R src/etc/fail2ban/filter.d/* /etc/fail2ban/filter.d/
 cp -R src/etc/fail2ban/jail.d/* /etc/fail2ban/jail.d
 cp src/etc/fail2ban/jail.local /etc/fail2ban/jail.local
 
+# Use root password for sudo command
+touch /etc/sudoers.d/10-rootpw
+echo "Defaults rootpw" >> /etc/sudoers.d/10-rootpw
+
 
