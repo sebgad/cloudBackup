@@ -17,49 +17,44 @@ curl -o /etc/udev/rules.d/70-u2f.rules https://raw.githubusercontent.com/Yubico/
 # Reload udev rules
 udevadm control --reload-rules && udevadm trigger
 
-read -p "Please input username who suppose to use yubikey for authentification?" USERNAME
-# as user, please insert yubikey
-mkdir -p /home/$USERNAME/.config/Yubico
+echo "write first public key file, please press key button"
+mkdir -p /etc/Yubico
+touch /etc/Yubico/u2f_keys
 
-# write first key to key file, please press key button
-pamu2fcfg -P > /home/$USERNAME/.config/Yubico/u2f_keys # switch "-P" is optional. You do not need to press the key when logging if this switch is set.
+read -p "Please input usernames (space sep) who should use key for login." USERNAMES
 
-# Optional: append keys with 
-# pamu2fcfg -P >> ~/.config/Yubico/u2f_keys 
+for username in $USERNAMES;
+do
+	pamu2fcfg -P --username=$username >> /etc/Yubico/u2f_keys # switch "-P" is optional. You do not need to press the key when logging if this switch is set.
+	
+done
 
-# Make key system wide available
-sudo mkdir -p /root/.config/Yubico
-sudo cp /home/$USERNAME/.config/Yubico/u2f_keys /root/.config/Yubico/
+echo "Optional step: append additional (hardware keys)"
+echo "use command pamu2fcfg -P --username=USER >> /etc/Yubico/u2f_keys"
 
-# Change to root
-cp /root/.config/Yubico/u2f_keys /root/.config/Yubico/u2f_keys_root
-
-# replace user with root in file
-sed -i 's/.*:/root:/g' /root/.config/Yubico/u2f_keys_root
-
-# Delete key files in user directory
-rm -r /home/$USERNAME/.config/Yubico
-
-# Check output file
-echo "check output file. Should have the format root:Key"
-cat /root/.config/Yubico/u2f_keys_root
-
-# add yubikey authentification for command sudo
 # Make backup in case something went wrong
 mkdir /root/pam_backup
+
+# add yubikey authentification for command sudo
 cp /etc/pam.d/sudo /root/pam_backup
 echo "add yubikey authentification for command sudo. Please check /etc/pam.d/sudo afterwards."
-perl -i -0pe 's/@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/root\/.config\/Yubico\/u2f_keys userpresence=0\n/@include common-auth\n/' /etc/pam.d/sudo 
+perl -i -0pe 's/@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n/@include common-auth\n/' /etc/pam.d/sudo
+
+# add yubikey authentification for command sudo-i
+cp /etc/pam.d/sudo-i /root/pam_backup
+echo "add yubikey authentification for command sudo. Please check /etc/pam.d/sudo afterwards."
+perl -i -0pe 's/@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n/@include common-auth\n/' /etc/pam.d/sudo-i
 
 # add yubikey authentification for command su
 cp /etc/pam.d/su /root/pam_backup
 echo "add yubikey authentification for command su. Please check /etc/pam.d/su afterwards."
-perl -i -0pe 's/auth       sufficient pam_rootok.so\n/auth       sufficient pam_rootok.so\nauth    sufficient      pam_u2f.so      authfile=\/root\/.config\/Yubico\/u2f_keys_root userpresence=0\n/' /etc/pam.d/su
+perl -i -0pe 's/auth       sufficient pam_rootok.so\n/auth       sufficient pam_rootok.so\nauth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n/' /etc/pam.d/su
 
 # add yubikey authentification for login over TTY
 cp /etc/pam.d/login /root/pam_backup
 echo "add yubikey authentification for command su. Please check /etc/pam.d/login afterwards."
-perl -i -0pe 's/@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/root\/.config\/Yubico\/u2f_keys userpresence=0\n@include common-auth\n/' /etc/pam.d/login
+perl -i -0pe 's/@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys_root userpresence=0\n@include common-auth\n/' /etc/pam.d/login
+
 
 echo "backups for /etc/pam.d/sudo /etc/pam.d/su /etc/pam.d/login were copied to /root/pam_backup, in case something went wrong."
 
