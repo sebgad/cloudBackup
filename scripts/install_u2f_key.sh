@@ -1,4 +1,4 @@
-!#/bin/bash
+#!/bin/bash
 
 # Please run script as root
 if [ "$EUID" -ne 0 ]
@@ -11,7 +11,7 @@ fi
 add-apt-repository ppa:yubico/stable -y && apt-get update
 
 # Install udev tool and rules for yubikey / libpam for user authentification
-apt install -y libu2f-udev libpam-u2f
+apt install -y libu2f-udev libpam-u2f curl
 curl -o /etc/udev/rules.d/70-u2f.rules https://raw.githubusercontent.com/Yubico/libfido2/main/udev/70-u2f.rules
 
 # Reload udev rules
@@ -21,7 +21,9 @@ echo "write first public key file, please press key button"
 mkdir -p /etc/Yubico
 touch /etc/Yubico/u2f_keys
 
-read -p "Please input usernames (space sep) who should use key for login." USERNAMES
+read -p "Please input usernames (space sep) who should use key for login: " USERNAMES
+
+echo "ATTENTION: Please press your Yubikey button now as many times as user are added"
 
 for username in $USERNAMES;
 do
@@ -33,28 +35,27 @@ echo "Optional step: append additional (hardware keys)"
 echo "use command pamu2fcfg -P --username=USER >> /etc/Yubico/u2f_keys"
 
 # Make backup in case something went wrong
-mkdir /root/pam_backup
+mkdir -p /root/pam_backup
 
 # add yubikey authentification for command sudo
 cp /etc/pam.d/sudo /root/pam_backup
 echo "add yubikey authentification for command sudo. Please check /etc/pam.d/sudo afterwards."
-perl -i -0pe 's/@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n/@include common-auth\n/' /etc/pam.d/sudo
+perl -i -0pe 's/\@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n\@include common-auth\n/g' /etc/pam.d/sudo
 
 # add yubikey authentification for command sudo-i
 cp /etc/pam.d/sudo-i /root/pam_backup
 echo "add yubikey authentification for command sudo. Please check /etc/pam.d/sudo afterwards."
-perl -i -0pe 's/@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n/@include common-auth\n/' /etc/pam.d/sudo-i
+perl -i -0pe 's/\@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n\@include common-auth\n/g' /etc/pam.d/sudo-i
 
 # add yubikey authentification for command su
 cp /etc/pam.d/su /root/pam_backup
 echo "add yubikey authentification for command su. Please check /etc/pam.d/su afterwards."
-perl -i -0pe 's/auth       sufficient pam_rootok.so\n/auth       sufficient pam_rootok.so\nauth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n/' /etc/pam.d/su
+perl -i -0pe 's/auth       sufficient pam_rootok.so\n/auth       sufficient pam_rootok.so\nauth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n/g' /etc/pam.d/su
 
 # add yubikey authentification for login over TTY
 cp /etc/pam.d/login /root/pam_backup
 echo "add yubikey authentification for command su. Please check /etc/pam.d/login afterwards."
-perl -i -0pe 's/@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys_root userpresence=0\n@include common-auth\n/' /etc/pam.d/login
-
+perl -i -0pe 's/\@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n\@include common-auth\n/g' /etc/pam.d/login
 
 echo "backups for /etc/pam.d/sudo /etc/pam.d/su /etc/pam.d/login were copied to /root/pam_backup, in case something went wrong."
 
