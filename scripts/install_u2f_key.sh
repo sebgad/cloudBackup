@@ -6,6 +6,7 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+echo "###	ADD YUBICO REPOSITORY AND INSTALL PAM MODULES###"
 # Add yubico PPA
 # https://support.yubico.com/hc/en-us/articles/360016649039-Enabling-the-Yubico-PPA-on-Ubuntu
 add-apt-repository ppa:yubico/stable -y && apt-get update
@@ -17,23 +18,33 @@ curl -o /etc/udev/rules.d/70-u2f.rules https://raw.githubusercontent.com/Yubico/
 # Reload udev rules
 udevadm control --reload-rules && udevadm trigger
 
-echo "write first public key file, please press key button"
+echo
+echo
+
+echo "###	CREATE KEY FILE IF NOT EXISTS ###"
 mkdir -p /etc/Yubico
 touch /etc/Yubico/u2f_keys
 
+echo
 read -p "Please input usernames (space sep) who should use key for login: " USERNAMES
 
-echo "ATTENTION: Please press your Yubikey button now as many times as user are added"
+echo
+echo
+echo "### ATTENTION: Please press your Yubikey button now as many times as user are added ###"
 
 for username in $USERNAMES;
 do
 	pamu2fcfg -P --username=$username >> /etc/Yubico/u2f_keys # switch "-P" is optional. You do not need to press the key when logging if this switch is set.
-	
+	echo >> /etc/Yubico/u2f_keys
 done
 
+echo
 echo "Optional step: append additional (hardware keys)"
 echo "use command pamu2fcfg -P --username=USER >> /etc/Yubico/u2f_keys"
+echo
+echo
 
+echo "### CHANGE PAM CONFIG FILES FOR SUFFICIENT LOGIN METHOD ###"
 # Make backup in case something went wrong
 mkdir -p /root/pam_backup
 
@@ -57,11 +68,15 @@ cp /etc/pam.d/login /root/pam_backup
 echo "add yubikey authentification for command su. Please check /etc/pam.d/login afterwards."
 perl -i -0pe 's/\@include common-auth\n/auth    sufficient      pam_u2f.so      authfile=\/etc\/Yubico\/u2f_keys userpresence=0\n\@include common-auth\n/g' /etc/pam.d/login
 
+echo
 echo "backups for /etc/pam.d/sudo /etc/pam.d/su /etc/pam.d/login were copied to /root/pam_backup, in case something went wrong."
 
+echo
+echo
 # print Out a random passwort of the length 64
 echo "Please use a strong root password. For example this one:"
 < /dev/urandom tr -cd "[:print:]" | head -c 64; echo
-
+echo 
+echo
 echo "please check login. Changes should already be effective."
 
