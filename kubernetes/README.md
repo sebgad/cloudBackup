@@ -20,8 +20,11 @@ podman create \
   --restart=no \
   <image>
 ```
-Please consider here to change the restart policy in order to let systemd take care of it. Repeat this step with all necessary container. The label defines, that all containers in the pod are allowed to be updated automatically if a new image is available in the registry. You can move it to the container, if you only allow to certain containers inside the pod or remove if you do not allow auto update.
+Please consider here to change the restart policy in order to let systemd take care of it.
 
+Repeat this step with all necessary container.
+
+The label defines, that all containers in the pod are allowed to be updated automatically if a new image is available in the registry. Remove it, if you don't want autoupdate enabled for this container.
 
 ## Generate kubernetes file from pod
 ``` bash
@@ -50,20 +53,36 @@ The idea is here, that the template *podman-kube* is applied to the kubernetes f
 systemctl --user enable --now podman-auto-update.timer
 ```
 # Handling of secrets
-If you want to avoid writing login information in cleartext in the kubernetes file or run command, you can use podman secrets.
+If you want to avoid writing login information in cleartext in the kubernetes file or run command, you can create a dedicated kubernetes secret file and reference to the secret in the kubernetes pod file.
 
-Either create it directly (visible in shell history) or via file
+*Secret file*
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <SecretName>
+data:
+  password: <Password>
 
-Direct:
-``` bash
-printf "secret" | podman secret create secretname -
+```
+**Attention:** The password is base64 encoded, you can run the following command to encode your password:
+
+```bash
+echo -n '<password>' | base64
 ```
 
-via file:
-``` bash
-echo "secretdata" > secretfile
-podman secret create secretname secretfile
+You can import the secret by the command:
+```bash
+podman kube play secret.yaml
 ```
-
-If you want to use the secret inside the container, you can use
-the `--secret <secretname>` inside the run command. If you need to access it, you can find it under `/run/secrets/secretname` inside the container. Also a direct mapping to an environment variable in the run command is possible, e.g. `-e VARIABLE=/run/secrets/secretname`.
+In the kubernetes pod definition you can refer to the secret like this:
+```yaml
+...
+    env:
+    - name: ENV_VARIABLE_NAME
+      valueFrom:
+        secretKeyRef:
+          name: <SecretName>
+          key: password
+...
+```

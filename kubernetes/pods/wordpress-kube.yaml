@@ -18,11 +18,17 @@ spec:
     - mariadbd
     env:
     - name: MARIADB_PASSWORD
-      value: /run/secrets/db_wordpress_pw
+      valueFrom:
+        secretKeyRef:
+          name: db_wordpress_pw
+          key: password
     - name: MARIADB_DATABASE
       value: wordpress
     - name: MYSQL_ROOT_PASSWORD
-      value: /run/secrets/db_root_pw
+      valueFrom:
+        secretKeyRef:
+          name: db_root_pw
+          key: password
     - name: MARIADB_USER
       value: wordpress
     image: docker.io/library/mariadb:latest
@@ -39,7 +45,10 @@ spec:
     - apache2-foreground
     env:
     - name: WORDPRESS_DB_PASSWORD
-      value: /run/secrets/db_wordpress_pw
+      valueFrom:
+        secretKeyRef:
+          name: db_wordpress_pw
+          key: password
     - name: WORDPRESS_DB_HOST
       value: 127.0.0.1
     - name: WORDPRESS_DB_USER
