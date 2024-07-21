@@ -1,0 +1,40 @@
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-4.9.3
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    io.containers.autoupdate/backend: registry
+  creationTimestamp: "2024-07-21T10:23:33Z"
+  labels:
+    app: jellyfin
+  name: jellyfin
+spec:
+  containers:
+  - image: docker.io/jellyfin/jellyfin:latest
+    name: backend
+    ports:
+    - containerPort: 8096
+      hostPort: 8096
+    volumeMounts:
+    - mountPath: /config
+      name: opt-pods-jellyfin-config-host-0
+    - mountPath: /cache
+      name: opt-pods-jellyfin-cache-host-1
+    - mountPath: /media
+      name: mnt-clouddrive-jellyfin-host-2
+  volumes:
+  - hostPath:
+      path: /opt/pods/jellyfin/config
+      type: Directory
+    name: opt-pods-jellyfin-config-host-0
+  - hostPath:
+      path: /opt/pods/jellyfin/cache
+      type: Directory
+    name: opt-pods-jellyfin-cache-host-1
+  - hostPath:
+      path: /mnt/clouddrive/jellyfin
+      type: Directory
+    name: mnt-clouddrive-jellyfin-host-2

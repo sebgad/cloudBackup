@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# USER INPUT --------------------------------------------------
+
+# define restic repository as environment variable
+export RESTIC_REPOSITORY=/srv/backupdrive/
+# define restic password for encryption as environment variable
+export RESTIC_PASSWORD=1234
+
+# define directories to backup as array
+BACKUPDIRS=( /var/www/nextcloud /var/nextcloud-data )
+
+# define nextcloud location on filesystem
+NEXTCLOUD_LOC=/var/www/nextcloud
+
+MARIA_DB_HOST=localhost
+MARIA_DB_USER=nextadmin
+MARIA_DB_PW=1234
+MARIA_DB_NAME=nextcloud
+
+#-------------------------------------------------------------------
+
+# activate maintanance mode of nextcloud, no user access possible from now on
+sudo -u www-data php $NEXTCLOUD_LOC/occ maintenance:mode --on
+
+# wait 5s
+sleep 5
+
+# start / mount backup drive, if not already started/mounted
+startBackupDrive
+
+echo ''
+echo "########### File SYSTEM INFO ###############"
+df -h
+echo ''
+echo ''
+echo ''
+
+# timestamp for backup
+DATE=$(date --iso-8601)
+
+echo "############    Starting backup for $DATE    ###############"
+
+# show restic version as information
+restic version
+
+# loop over backup directories and save them
+for src_dir in "${BACKUPDIRS[@]}";
+do
+	echo "BACKING up $src_dir"
+        restic backup $src_dir
+	sleep 5
+	echo "---------------------------------------"
+done
+
+echo ''
+echo ''
+echo "BACKING up nextcloud maria-db database"
+# nextcloud maria-db backup as filestream
+mysqldump \
+ --single-transaction \
+ -h $MARIA_DB_HOST \
+ -u $MARIA_DB_USER \
+ -p$MARIA_DB_PW \
+  $MARIA_DB_NAME | restic backup --stdin --stdin-filename mysql_nextcloud_backup.sql
+
+echo "BACKUP PROCESS finished"
+
+# turn nextcloud maintenance mode off, server is accessible again
+echo "Turn nextcloud maintenance mode off"
+sudo -u www-data php $NEXTCLOUD_LOC/occ maintenance:mode --off
+echo ''
+echo ''
+# remove exclusive lock after checking file system
+restic unlock --remove-all
+
+# remove local cache files
+restic cache --cleanup
+
+# Define restic incremental backup forget strategy for each backup path (directory or filestream)
+#		- for the last 28 days which have one or more snapshots, only keep the last one for that day
+#		- for the last 12 weeks which have one or more snapshots, only keep the last one for that week
+#		- for the last 12 months which have one or more snapshots, only keep the last one for that month
+# unlink files and prune / remove them
+echo ''
+echo "RESTIC incremental backup forget strategy"
+restic forget --keep-daily 28 --keep-weekly 12 --keep-monthly 12 --prune
+
+echo "RESTIC SANITY CHECKS"
+# check integrity of repository. Day 1-6 of the week only 1/7 of the data
+# On day 7 check entire repository integrity
+DAY_OF_WEEK=$(date +%u)
+DAY_CMP=7
+if [[ $DAY_OF_WEEK -lt $DAY_CMP ]];then
+	echo "From Mon-Sat: Check Integrity of Pack $DAY_OF_WEEK/6 depending on the weekday"
+	restic check --read-data-subset=$DAY_OF_WEEK/6
+else
+	echo "On Sun: Check Integrity of the entire repository"
+	restic check --read-data
+fi
+echo ''
+
+# remove exclusive lock after checking file system
+restic unlock --remove-all
+
+# remove local cache files
+restic cache --cleanup
+
+# wait 10s before shutdown backup drive
+sleep 10
+
+stopBackupDrive
+
+echo ''
+echo "####################################### Done ######################################"
+echo ''
